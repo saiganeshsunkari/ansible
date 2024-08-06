@@ -1,0 +1,27 @@
+---
+
+- name: Install httpd server
+  yum:
+    name: httpd
+    state: present
+
+- name: Add permissions to access folder
+  shell:
+    cmd: sudo chmod 777 /var/www/html
+
+- name: Copy index.html
+  copy:
+    src: index.html
+    dest: /var/www/html/index.html
+
+- name: Enable httpd on restart
+  service:
+    name: httpd
+    enabled: yes
+  notify: restart httpd
+
+  handlers:
+  - name: restart httpd
+    service:
+      name: httpd
+      state: restarted
