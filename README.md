@@ -11,8 +11,8 @@ Steps to execute playbook:
 #
 6. Create an ansible vault. 'vault.pass' is referenced with '--vault-password-file' option. This opens up the 'vim' editor, press 'i' or 'a' to edit, then 'esc' ':wq' to save and exit
 Add this text in using your own access and secret key
-ec2_access_key: AAAAAAAAAAAAAABBBBBBBBBBBB                                      
-ec2_secret_key: afjdfadgf$fgajk5ragesfjgjsfdbtirhf.
+ec2_access_key: AAAAAAAAAAAAAABBBBBxxxxxxx                                      
+ec2_secret_key: axxxxxxxxxxxxxxxxxxxxxxxxx
 I have already did it. So, if you clone my code ignore this step: ansible-vault create group_vars/all/pass.yml --vault-password-file vault.pass
 #
 7. Execute Playbook: ansible-playbook ./playbooks/main.yml -e @group_vars/all/pass.yml --vault-password-file=vault.pass
