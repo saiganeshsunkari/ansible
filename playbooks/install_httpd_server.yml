@@ -1,0 +1,44 @@
+---
+
+- hosts: localhost
+  remote_user: ec2-user
+  vars:
+    - ansible_ssh_private_key_file: "~/.ssh/latest-ansible-keys.pem"
+
+  tasks:
+    - name: Install and configure httpd server
+      delegate_to: "{{ instance_ip }}"
+      become: true
+      block:
+        - name: Install httpd server
+          yum:
+            pkg: httpd
+            state: latest
+            use_backend: yum4
+
+        - name: Copy index.html
+          copy:
+            src: ../index.html
+            dest: /var/www/html/index.html
+            owner: apache
+            group: apache
+            mode: 0644
+
+        - name: Enable httpd on restart
+          service:
+            name: httpd
+            enabled: yes
+          notify: restart httpd
+
+  handlers:
+    - name: restart httpd
+      systemd:
+        name: httpd
+        state: restarted
+        enabled: yes
+
+
+
+
+
+

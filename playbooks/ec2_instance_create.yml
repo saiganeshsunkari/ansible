@@ -1,0 +1,103 @@
+---
+
+- hosts: localhost
+
+  tasks:
+    - name: Provision ec2
+      delegate_to: localhost
+      block:
+        - name: Create key pair
+          amazon.aws.ec2_key:
+            name: "latest-ansible-keys"
+            region: ap-south-1
+            aws_access_key: "{{ ec2_access_key }}"
+            aws_secret_key: "{{ ec2_secret_key }}"
+          register: key_data
+          notify: Store Instance Key
+
+        - name: "Fetch Controller Node Public IP"
+          shell: curl ifconfig.co
+          register: public_ip
+
+        - name: "Create Security Group"
+          ec2_group:
+            name: "allow_ssh_http_access"
+            description: "SSH and HTTP Port Access"
+            vpc_id: "vpc-0ad1f1e019a51f722"
+            region: ap-south-1
+            aws_secret_key: "{{ ec2_secret_key }}"
+            aws_access_key: "{{ ec2_access_key }}"
+            rules:
+              - proto: tcp
+                ports:
+                  - 80
+                cidr_ip: 0.0.0.0/0
+              - proto: tcp
+                ports:
+                  - 22
+                cidr_ip: "{{ public_ip.stdout }}/32"
+            rules_egress:
+              - proto: all
+                cidr_ip: 0.0.0.0/0
+          register: security_group_status
+
+        - debug:
+            msg: "{{ security_group_status }}"
+
+        - name: Create EC2 instance
+          amazon.aws.ec2_instance:
+            name: "public-compute-instance"
+            key_name: "latest-ansible-keys"
+            instance_type: t2.micro
+            region: ap-south-1
+            state: present
+            aws_access_key: "{{ ec2_access_key }}"
+            aws_secret_key: "{{ ec2_secret_key }}"
+            wait: yes
+            wait_timeout: 500
+            security_groups: ["sg-01dee45704bbc7ca8"]
+            vpc_subnet_id: "subnet-05cf34bf802e2ec95"
+            network:
+              assign_public_ip: true
+            image_id: "ami-0e1d06225679bc1c5"
+          when:
+            - key_data.failed == false
+            - security_group_status.failed == false
+          register: instance_launch_status
+
+        - name: "Waiting for the instance to be ready"
+          local_action:
+            module: wait_for
+            host: "{{ item.public_ip_address }}"
+            port: 22
+            state: started
+          ignore_errors: true
+          with_items:
+            - "{{ instance_launch_status.instances }}"
+
+        - name: Get instance details
+          ec2_instance_info:
+            aws_access_key: "{{ ec2_access_key }}"
+            aws_secret_key: "{{ ec2_secret_key }}"
+            region: ap-south-1
+          register: result
+
+        - debug:
+            msg: "{{ result.instances[0] }}"
+
+        - set_fact:
+            instance_ip: "{{ result.instances[0].public_ip_address }}"
+
+  handlers:
+    - name: "Store Instance Key"
+      local_action:
+        module: copy
+        content: "{{ key_data.key.private_key }}"
+        dest: ~/.ssh/latest-ansible-keys.pem
+        mode: 0400
+
+
+
+
+
+

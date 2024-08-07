@@ -1,0 +1,3 @@
+---
+- import_playbook: ec2_instance_create.yml
+- import_playbook: install_httpd_server.yml
